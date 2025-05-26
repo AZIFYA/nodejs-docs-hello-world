@@ -3,7 +3,7 @@ name: 🚀 Déploiement automatique vers AKS
 on:
   push:
     branches:
-      - principal
+      - main
 
 jobs:
   build-and-deploy:
