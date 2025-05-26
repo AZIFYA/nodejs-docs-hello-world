@@ -1,0 +1,41 @@
+name: 🚀 Déploiement automatique vers AKS
+
+on:
+  push:
+    branches:
+      - principal
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Cloner le dépôt
+      uses: actions/checkout@v3
+
+    - name: 🔐 Connexion à Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: 🔓 Connexion à ACR
+      run: az acr login --name acraksprive
+
+    - name: 🐳 Build et push de l'image Docker
+      run: |
+        docker build -t acraksprive.azurecr.io/bonjour-le-monde:latest .
+        docker push acraksprive.azurecr.io/bonjour-le-monde:latest
+
+    - name: ☸️ Connexion à AKS
+      uses: azure/aks-set-context@v3
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        cluster-name: aksprive_test
+        resource-group: RG_test_aksprive
+
+    - name: 🚀 Déploiement Kubernetes
+      run: |
+        kubectl create deployment bonjour-le-monde --image=acraksprive.azurecr.io/bonjour-le-monde:latest --dry-run=client -o yaml > deploy.yaml
+        kubectl apply -f deploy.yaml
+        kubectl expose deployment bonjour-le-monde --type=LoadBalancer --port=80 --target-port=3000 --name=bonjour-service --dry-run=client -o yaml > service.yaml
+        kubectl apply -f service.yaml
